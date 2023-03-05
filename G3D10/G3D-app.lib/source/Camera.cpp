@@ -517,6 +517,16 @@ void Camera::makeGUI(GuiPane* p, GApp* app) {
     motionPane->pack(); 
 #   undef INDENT_SLIDER
 
+    GuiPane* uBlurPane = tabPane->addTab(GuiText("Universal Blur", defaultFont, (float)tabCaptionSize));
+    {
+        uBlurPane->moveBy(0, 5);
+        uBlurPane->addCheckBox
+        ("Enabled",
+            Pointer<bool>(&universalBlurSettings(),
+                &UniversalBlurSettings::enabled,
+                &UniversalBlurSettings::setEnabled));
+    }
+
     /////////////////////////////////////////////////////////
     GuiPane* projectionPane = tabPane->addTab(GuiText("Projection", defaultFont, (float)tabCaptionSize));
     projectionPane->moveBy(-3, 2);

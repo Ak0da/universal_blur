@@ -20,6 +20,7 @@
 #include "G3D-app/FilmSettings.h"
 #include "G3D-app/Entity.h"
 #include "G3D-app/MotionBlurSettings.h"
+#include "G3D-app/UniversalBlurSettings.h"
 
 namespace G3D {
 
@@ -66,6 +67,7 @@ protected:
 
     DepthOfFieldSettings        m_depthOfFieldSettings;
     MotionBlurSettings          m_motionBlurSettings;
+    UniversalBlurSettings       m_universalBlurSettings;
     FilmSettings                m_filmSettings;
 
     int                         m_taaSampleIndex = 0;
@@ -390,7 +392,15 @@ public:
     const MotionBlurSettings& motionBlurSettings() const {
         return m_motionBlurSettings;
     }
+    
+    UniversalBlurSettings& universalBlurSettings() {
+        return m_universalBlurSettings;
+    }
 
+    const UniversalBlurSettings& universalBlurSettings() const {
+        return m_universalBlurSettings;
+    }
+    
     FilmSettings& filmSettings() {
         return m_filmSettings;
     }

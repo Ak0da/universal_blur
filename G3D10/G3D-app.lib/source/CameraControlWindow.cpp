@@ -265,6 +265,16 @@ CameraControlWindow::CameraControlWindow
 #   undef INDENT_SLIDER
     /////////////////////////////////////////////////////////////////////////////////////////
 
+    GuiPane* uBlurPane = tabPane->addTab(GuiText("Universal Blur", defaultFont, (float)tabCaptionSize));
+    {
+        uBlurPane->moveBy(0, 5);
+        uBlurPane->addCheckBox
+        ("Enabled",
+            Pointer<bool>(&m_camera->universalBlurSettings(),
+                &UniversalBlurSettings::enabled,
+                &UniversalBlurSettings::setEnabled));
+    }
+
     GuiPane* manualPane = tabPane->addTab(GuiText("Spline", defaultFont, (float)tabCaptionSize));
     manualPane->moveBy(-3, 2);
 
