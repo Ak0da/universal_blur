@@ -1,3 +1,19 @@
+/*
+/*/
+!/.gitignore
+
+!/G3D10/
+/G3D10/*
+/G3D10/*/
+
+!/G3D10/G3D-app.lib/
+
+!/G3D10/data-files/
+/G3D10/data-files/*
+/G3D10/data-files/*/
+
+!/G3D10/data-files/shader/
+
 # Prerequisites
 *.d
 
@@ -25,6 +41,7 @@
 *.la
 *.a
 *.lib
+!G3D-app.lib/
 
 # Executables
 *.exe
