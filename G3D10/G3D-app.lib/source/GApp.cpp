@@ -39,6 +39,7 @@
 #include "G3D-app/ScreenCapture.h"
 #include "G3D-gfx/Shader.h"
 #include "G3D-app/Shape.h"
+//#include "G3D-app/UniversalBlur.h"
 #include "G3D-app/UprightSplineManipulator.h"
 #include "G3D-app/UserInput.h"
 #include "G3D-app/EmulatedGazeTracker.h"
@@ -394,6 +395,7 @@ void GApp::initializeOpenGL(RenderDevice* rd, OSWindow* window, bool createWindo
 
     m_depthOfField = DepthOfField::create();
     m_motionBlur   = MotionBlur::create();
+    m_universalBlur = UniversalBlur::create();
 
     renderDevice->setColorClearValue(Color3(0.1f, 0.5f, 1.0f));
 
@@ -1191,11 +1193,22 @@ void GApp::onGraphics3D(RenderDevice* rd, Array<shared_ptr<Surface> >& allSurfac
 void GApp::onPostProcessHDR3DEffects(RenderDevice* rd) {
     // Post-process special effects
     
-    m_depthOfField->apply(rd, m_framebuffer->texture(0), m_framebuffer->texture(Framebuffer::DEPTH), activeCamera(), m_settings.hdrFramebuffer.depthGuardBandThickness - m_settings.hdrFramebuffer.colorGuardBandThickness);
+     m_universalBlur->apply(
+         rd, 
+         m_framebuffer->texture(0), 
+         m_framebuffer->texture(Framebuffer::DEPTH), 
+         m_gbuffer->texture(GBuffer::Field::SS_POSITION_CHANGE), 
+         activeCamera(), 
+         m_settings.hdrFramebuffer.depthGuardBandThickness - m_settings.hdrFramebuffer.colorGuardBandThickness
+     );
+    
+    
+     m_depthOfField->apply(rd, m_framebuffer->texture(0), m_framebuffer->texture(Framebuffer::DEPTH), activeCamera(), m_settings.hdrFramebuffer.depthGuardBandThickness - m_settings.hdrFramebuffer.colorGuardBandThickness);
 
-    m_motionBlur->apply(rd, m_framebuffer->texture(0), m_gbuffer->texture(GBuffer::Field::SS_POSITION_CHANGE),
-                        m_framebuffer->texture(Framebuffer::DEPTH), activeCamera(),
-                        m_settings.hdrFramebuffer.depthGuardBandThickness - m_settings.hdrFramebuffer.colorGuardBandThickness);
+     m_motionBlur->apply(rd, m_framebuffer->texture(0), m_gbuffer->texture(GBuffer::Field::SS_POSITION_CHANGE),
+            m_framebuffer->texture(Framebuffer::DEPTH), activeCamera(),
+            m_settings.hdrFramebuffer.depthGuardBandThickness - m_settings.hdrFramebuffer.colorGuardBandThickness);
+    
     
 }
 

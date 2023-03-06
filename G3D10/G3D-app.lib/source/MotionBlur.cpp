@@ -25,7 +25,7 @@ void MotionBlur::apply
   const shared_ptr<Camera>&     camera,
   Vector2int16                  trimBandThickness) {
 
-    if (! camera->motionBlurSettings().enabled()) {
+    if (! camera->motionBlurSettings().enabled() || camera->universalBlurSettings().enabled()) {
         return;
     }
 

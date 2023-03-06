@@ -101,6 +101,7 @@
 #include "G3D-app/TextSurface.h"
 #include "G3D-app/AmbientOcclusion.h"
 #include "G3D-app/DepthOfField.h"
+#include "G3D-app/UniversalBlur.h"
 #include "G3D-app/Skybox.h"
 #include "G3D-app/SkyboxSurface.h"
 #include "G3D-app/VisibleEntity.h"

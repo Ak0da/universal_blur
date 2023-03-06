@@ -29,6 +29,7 @@
 #include "G3D-app/debugDraw.h"
 #include "G3D-app/ArticulatedModelSpecificationEditorDialog.h"
 #include "G3D-app/DefaultRenderer.h"
+#include "G3D-app/UniversalBlur.h"
 #include <mutex>
 
 namespace G3D {
@@ -43,6 +44,7 @@ class Renderer;
 class Scene;
 class ScreenCapture;
 class Shape;
+class UniversalBlur;
 class UserInput;
 class XR;
 class MarkerEntity;
@@ -532,6 +534,8 @@ protected:
     shared_ptr<DepthOfField>        m_depthOfField;
 
     shared_ptr<MotionBlur>          m_motionBlur;
+
+    shared_ptr<UniversalBlur>          m_universalBlur;
 
     /** GBuffer used for the OSWindow. VRApp adds per-eye HMD GBuffers */ 
     shared_ptr<GBuffer>             m_osWindowGBuffer;

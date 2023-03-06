@@ -32,8 +32,8 @@ void DepthOfField::apply
  const shared_ptr<Camera>&      camera,
  Vector2int16                   trimBandThickness,
  DebugOption                    debugOption) {
-    
-    if ((camera->depthOfFieldSettings().model() == DepthOfFieldModel::NONE) || ! camera->depthOfFieldSettings().enabled()) {
+
+    if ((camera->depthOfFieldSettings().model() == DepthOfFieldModel::NONE) || ! camera->depthOfFieldSettings().enabled() || camera->universalBlurSettings().enabled()) {
         const shared_ptr<Framebuffer>& f = rd->framebuffer();
         const shared_ptr<Framebuffer::Attachment>& a = f->get(Framebuffer::COLOR0);
        

@@ -269,7 +269,7 @@ CameraControlWindow::CameraControlWindow
     {
         uBlurPane->moveBy(0, 5);
         uBlurPane->addCheckBox
-        ("Enabled",
+        ("Enabled (Overrides MB and DoF)",
             Pointer<bool>(&m_camera->universalBlurSettings(),
                 &UniversalBlurSettings::enabled,
                 &UniversalBlurSettings::setEnabled));
