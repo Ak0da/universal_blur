@@ -12,7 +12,7 @@
 
 
 namespace G3D {
-    /*
+    
     void UniversalBlur::apply
     (RenderDevice* rd,
         shared_ptr<Texture> color,
@@ -274,20 +274,20 @@ namespace G3D {
         m_tileMinMaxTempFramebuffer->resize(h, smallWidth);
         m_neighborMinMaxFramebuffer->resize(smallWidth, smallHeight);
     }
-    */
+    
 
-    /*
+    
     UniversalBlur::UniversalBlur() : m_debugShowTiles(false) 
     {
 
     }
-    */
+    
 
-    /*
-    shared_ptr<UniversalBlur> UniversalBlur::create()
+    
+    shared_ptr<UniversalBlur> UniversalBlur::create(const String& debugName)
     {
-        //return shared_ptr<UniversalBlur>(new UniversalBlur());
-        return createShared<UniversalBlur>("UniversalBlur");
+        return shared_ptr<UniversalBlur>(new UniversalBlur());
+        //return createShared<UniversalBlur>(debugName);
     }
 
     void UniversalBlur::makeRandomBuffer() {
@@ -349,7 +349,7 @@ namespace G3D {
             mesh.render(rd);
         }
     }
-    */
+    
 
 
     // DoF PART STARTS HERE ------------------------------------------------------------------------
@@ -360,7 +360,7 @@ namespace G3D {
     }
     */
 
-    /*
+    
     void UniversalBlur::computeCoC
     (RenderDevice* rd,
         const shared_ptr<Texture>& color,
@@ -495,7 +495,7 @@ namespace G3D {
             LAUNCH_SHADER("DepthOfField_blur.*", args);
         } rd->pop2D();
     }
-
+    
 
     void UniversalBlur::composite
     (RenderDevice* rd,
@@ -526,11 +526,11 @@ namespace G3D {
             LAUNCH_SHADER("DepthOfField_composite.*", args);
         } rd->pop2D();
     }
-    */
+    
 
     /** Allocates or resizes a texture and framebuffer to match a target
         format and dimensions. */
-    /*
+    
     static void matchTarget
     (const String& textureName,
         const shared_ptr<Texture>& target,
@@ -541,8 +541,8 @@ namespace G3D {
         const ImageFormat* format,
         shared_ptr<Texture>& texture,
         shared_ptr<Framebuffer>& framebuffer,
-        Framebuffer::AttachmentPoint   attachmentPoint = Framebuffer::COLOR0,
-        bool                           generateMipMaps = false) {
+        Framebuffer::AttachmentPoint   attachmentPoint,
+        bool                           generateMipMaps) {
 
         alwaysAssertM(format, "Format may not be nullptr");
 
@@ -569,8 +569,8 @@ namespace G3D {
             texture->resize(w, h);
         }
     }
-    */
-    /*
+    
+    
     void UniversalBlur::resizeBuffers(shared_ptr<Texture> target, int reducedResolutionFactor, const Vector2int16 trimBandThickness) {
         const ImageFormat* plusAlphaFormat = ImageFormat::getFormatWithAlpha(target->format());
 
@@ -584,5 +584,5 @@ namespace G3D {
         matchTarget(m_debugName + "::m_nearBuffer", target, reducedResolutionFactor, reducedResolutionFactor, trimBandThickness.x, trimBandThickness.y, plusAlphaFormat, m_nearBuffer, m_verticalFramebuffer, Framebuffer::COLOR0);
         matchTarget(m_debugName + "::m_blurBuffer", target, reducedResolutionFactor, reducedResolutionFactor, trimBandThickness.x, trimBandThickness.y, target->format(), m_blurBuffer, m_verticalFramebuffer, Framebuffer::COLOR1);
     }
-    */
+    
 } // G3D
