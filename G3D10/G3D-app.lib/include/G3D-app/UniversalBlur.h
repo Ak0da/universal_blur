@@ -210,13 +210,18 @@ namespace G3D {
 
         void blurPass
         (RenderDevice* rd,
+            const shared_ptr<Texture>& velocity,
             const shared_ptr<Texture>& blurInput,
             const shared_ptr<Texture>& nearInput,
+            const shared_ptr<Texture>& neighborMax,
             const shared_ptr<Framebuffer>& output,
             bool                            horizontal,
             const shared_ptr<Camera>& camera,
             const Rect2D& fullViewport,
             float                           maxCoCRadiusPixels,
+            Vector2int16                    trimBandThickness,
+            float                           exposureTimeFraction,
+            int                             maxBlurRadiusPixels,
             bool                            diskFramebuffer);
 
         /** Writes to the currently-bound framebuffer. */

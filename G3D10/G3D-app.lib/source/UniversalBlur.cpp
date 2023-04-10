@@ -26,7 +26,7 @@ namespace G3D {
         if (!camera->universalBlurSettings().enabled()) {
             return;
         }
-
+        
         BEGIN_PROFILER_EVENT("G3D::UniversalBlur::MotionBlur::apply");
 
         if (isNull(m_randomBuffer)) {
@@ -75,7 +75,7 @@ namespace G3D {
 
         computeTileMinMax(rd, velocity, maxBlurRadiusPixels, trimBandThickness);
         computeNeighborMinMax(rd, m_tileMinMaxFramebuffer->texture(0));
-        gatherBlur(rd, src, m_neighborMinMaxFramebuffer->texture(0), velocity, depth, numSamplesOdd, maxBlurRadiusPixels, exposureTimeFraction, trimBandThickness);
+        //gatherBlur(rd, src, m_neighborMinMaxFramebuffer->texture(0), velocity, depth, numSamplesOdd, maxBlurRadiusPixels, exposureTimeFraction, trimBandThickness);
 
         if (m_debugShowTiles) {
             rd->push2D(); {
@@ -84,9 +84,9 @@ namespace G3D {
         }
 
         END_PROFILER_EVENT();
-
+        
         // DoF Part of the function starts here ---------------------------------------------
-
+        
         if ((camera->depthOfFieldSettings().model() == DepthOfFieldModel::NONE)) {
             const shared_ptr<Framebuffer>& f = rd->framebuffer();
             const shared_ptr<Framebuffer::Attachment>& a = f->get(Framebuffer::COLOR0);
@@ -114,8 +114,8 @@ namespace G3D {
 
         debugAssert(maxCoCRadiusPixels >= 0.0f);
         computeCoC(rd, color, depth, camera, trimBandThickness, farRadiusRescale, maxCoCRadiusPixels);
-        blurPass(rd, m_packedBuffer, m_packedBuffer, m_horizontalFramebuffer, true, camera, viewport, maxCoCRadiusPixels, diskFramebuffer);
-        blurPass(rd, m_tempBlurBuffer, m_tempNearBuffer, m_verticalFramebuffer, false, camera, viewport, maxCoCRadiusPixels, diskFramebuffer);
+        blurPass(rd,velocity, m_packedBuffer, m_packedBuffer, m_neighborMinMaxFramebuffer->texture(0), m_horizontalFramebuffer, true, camera, viewport, maxCoCRadiusPixels, trimBandThickness, exposureTimeFraction, maxBlurRadiusPixels, diskFramebuffer);
+        blurPass(rd, velocity, m_tempBlurBuffer, m_tempNearBuffer, m_neighborMinMaxFramebuffer->texture(0), m_verticalFramebuffer, false, camera, viewport, maxCoCRadiusPixels, trimBandThickness, exposureTimeFraction, maxBlurRadiusPixels, diskFramebuffer);
         composite(rd, m_packedBuffer, m_blurBuffer, m_nearBuffer, debugOption, trimBandThickness, farRadiusRescale, diskFramebuffer);
         END_PROFILER_EVENT();
     }
@@ -439,13 +439,18 @@ namespace G3D {
 
     void UniversalBlur::blurPass
     (RenderDevice* rd,
+        const shared_ptr<Texture>& velocity,
         const shared_ptr<Texture>& blurInput,
         const shared_ptr<Texture>& nearInput,
+        const shared_ptr<Texture>& neighborMax,
         const shared_ptr<Framebuffer>& output,
         bool                           horizontal,
         const shared_ptr<Camera>& camera,
         const Rect2D& fullViewport,
         float                          maxCoCRadiusPixels,
+        Vector2int16                   trimBandThickness,
+        float                          exposureTimeFraction,
+        int                            maxBlurRadiusPixels,
         bool                           diskFramebuffer) {
 
         alwaysAssertM(notNull(blurInput), "Input is nullptr");
@@ -482,6 +487,14 @@ namespace G3D {
         rd->push2D(output); {
             rd->clear();
             Args args;
+
+            GBuffer::bindReadArgs
+            (args,
+                GBuffer::Field::SS_POSITION_CHANGE,
+                velocity);
+
+            neighborMax->setShaderArgs(args, "neighborMinMax_", Sampler::buffer());
+
             args.setUniform("blurSourceBuffer", blurInput, Sampler::buffer());
             args.setUniform("nearSourceBuffer", nearInput, Sampler::buffer(), true);
             args.setUniform("maxCoCRadiusPixels", int(maxCoCRadiusPixels));
@@ -489,10 +502,14 @@ namespace G3D {
             args.setUniform("nearBlurRadiusPixels", nearBlurRadiusPixels);
             args.setUniform("invNearBlurRadiusPixels", 1.0f / max(float(nearBlurRadiusPixels), 0.0001f));
             args.setUniform("fieldOfView", (float)camera->fieldOfViewAngle());
+            args.setUniform("exposureTime", exposureTimeFraction);
+            args.setUniform("trimBandThickness", trimBandThickness);
             args.setMacro("HORIZONTAL", horizontal ? 1 : 0);
             args.setMacro("COMPUTE_PERCENT", diskFramebuffer ? 100 : -1);
+            args.setMacro("maxBlurRadius", maxBlurRadiusPixels);
             args.setRect(rd->viewport());
-            LAUNCH_SHADER("DepthOfField_blur.*", args);
+            //LAUNCH_SHADER("DepthOfField_blur.*", args);
+            LAUNCH_SHADER("UniversalBlur_DirectionalBlur.*", args);
         } rd->pop2D();
     }
     
