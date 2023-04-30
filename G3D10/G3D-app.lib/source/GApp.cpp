@@ -1193,23 +1193,25 @@ void GApp::onGraphics3D(RenderDevice* rd, Array<shared_ptr<Surface> >& allSurfac
 void GApp::onPostProcessHDR3DEffects(RenderDevice* rd) {
     // Post-process special effects
     
-     m_universalBlur->apply(
-         rd, 
-         m_framebuffer->texture(0), 
-         m_framebuffer->texture(Framebuffer::DEPTH), 
-         m_gbuffer->texture(GBuffer::Field::SS_POSITION_CHANGE), 
-         activeCamera(), 
-         m_settings.hdrFramebuffer.depthGuardBandThickness - m_settings.hdrFramebuffer.colorGuardBandThickness
-     );
-    
-    
-     m_depthOfField->apply(rd, m_framebuffer->texture(0), m_framebuffer->texture(Framebuffer::DEPTH), activeCamera(), m_settings.hdrFramebuffer.depthGuardBandThickness - m_settings.hdrFramebuffer.colorGuardBandThickness);
+    if (activeCamera()->universalBlurSettings().enabled())
+    {
+        m_universalBlur->apply(
+            rd,
+            m_framebuffer->texture(0),
+            m_framebuffer->texture(Framebuffer::DEPTH),
+            m_gbuffer->texture(GBuffer::Field::SS_POSITION_CHANGE),
+            activeCamera(),
+            m_settings.hdrFramebuffer.depthGuardBandThickness - m_settings.hdrFramebuffer.colorGuardBandThickness
+        );
+    }
+    else
+    {
+        m_depthOfField->apply(rd, m_framebuffer->texture(0), m_framebuffer->texture(Framebuffer::DEPTH), activeCamera(), m_settings.hdrFramebuffer.depthGuardBandThickness - m_settings.hdrFramebuffer.colorGuardBandThickness);
 
-     m_motionBlur->apply(rd, m_framebuffer->texture(0), m_gbuffer->texture(GBuffer::Field::SS_POSITION_CHANGE),
+        m_motionBlur->apply(rd, m_framebuffer->texture(0), m_gbuffer->texture(GBuffer::Field::SS_POSITION_CHANGE),
             m_framebuffer->texture(Framebuffer::DEPTH), activeCamera(),
             m_settings.hdrFramebuffer.depthGuardBandThickness - m_settings.hdrFramebuffer.colorGuardBandThickness);
-    
-    
+    }
 }
 
 

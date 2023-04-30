@@ -18,6 +18,7 @@ namespace G3D {
     class UniversalBlurSettings {
     private:
         bool                        m_enabled;
+        bool                        m_MbAlgorithm;
 
     public:
 
@@ -27,7 +28,10 @@ namespace G3D {
 
         //Any toAny() const;
 
-        UniversalBlurSettings() :m_enabled(false) {}
+        UniversalBlurSettings() :
+            m_enabled(false), 
+            m_MbAlgorithm(true)
+        {}
 
         bool enabled() const {
             return m_enabled;
@@ -35,6 +39,14 @@ namespace G3D {
 
         void setEnabled(bool e) {
             m_enabled = e;
+        }
+
+        bool MbAlgorithm() const {
+            return m_MbAlgorithm;
+        }
+
+        void setMbAlgorithm(bool e) {
+            m_MbAlgorithm = e;
         }
 
     };

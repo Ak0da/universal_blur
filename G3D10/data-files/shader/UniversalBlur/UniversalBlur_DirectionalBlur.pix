@@ -259,7 +259,7 @@ void main() {
             // negative values become zero.
             //near.a = square(saturate(r_B * invNearBlurRadiusPixels));
             // change order of directions to make it work ?
-            near.a = square(saturate(r_B * invNearBlurRadiusPixels)) + speed*0.01; // Added by Hugo (actually does something on second pass)
+            near.a = square(saturate(r_B * invNearBlurRadiusPixels)) + speedB*0.01;// + speed*0.01; // Added by Hugo (actually does something on second pass)
             //near.a = speed/100;  // Increasing coverage here blurs in every direction
             near.rgb = blurInput.rgb * near.a;
             //near.a += speed*0.01; // Added by Hugo

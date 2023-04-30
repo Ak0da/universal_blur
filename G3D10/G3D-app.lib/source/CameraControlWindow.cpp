@@ -269,10 +269,17 @@ CameraControlWindow::CameraControlWindow
     {
         uBlurPane->moveBy(0, 5);
         uBlurPane->addCheckBox
-        ("Enabled (Overrides MB and DoF)",
+        ("Enabled (Forces MB and DoF activation)",
             Pointer<bool>(&m_camera->universalBlurSettings(),
                 &UniversalBlurSettings::enabled,
                 &UniversalBlurSettings::setEnabled));
+        {
+            uBlurPane->addCheckBox
+            ("Use motion blur algorithm",
+                Pointer<bool>(&m_camera->universalBlurSettings(),
+                    &UniversalBlurSettings::MbAlgorithm,
+                    &UniversalBlurSettings::setMbAlgorithm));
+        }
     }
 
     GuiPane* manualPane = tabPane->addTab(GuiText("Spline", defaultFont, (float)tabCaptionSize));
