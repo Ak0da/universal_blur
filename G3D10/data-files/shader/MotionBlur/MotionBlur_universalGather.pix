@@ -94,6 +94,12 @@ float3 readAdjustedVelocity(int2 C, sampler2D sampler, out float r) {
         // Adjust q's length based on the newly clamped radius
         q.xy *= (r / lenq);
     }
+    else // HUGO ---------------------------------------------
+    {
+        q.xy = float2(1.0, 0.0);
+    }
+
+    r += 20.0; // HUGO ---------------------
 
     return q;
 }
@@ -192,8 +198,8 @@ void main() {
 
     float r_dof = 20.0;
 
-    rmin_neighborhood += r_dof; // HUGO ---------------------------------------------------------------------
-    r_neighborhood += r_dof; //HUGO ----------------------------------------------------------------------
+    //rmin_neighborhood += r_dof; // HUGO ---------------------------------------------------------------------
+    //r_neighborhood += r_dof; //HUGO ----------------------------------------------------------------------
     /* // HUGO -------------------------------------
     if (r_neighborhood <= 0.505) {
         // there's no blurring at all in this pixel's neighborhood, since the maximum
@@ -202,10 +208,17 @@ void main() {
     }
     */
 
+
     // Compute PSF at me (this pixel)
     float  radius_center;
     float2 velocity_center = readAdjustedVelocity(me, radius_center).xy;
     //radius_center += r_dof; // HUGO ----------------------------------------
+    /*
+    if (r_neighborhood < 0.5) { // HUGO ----------------------------------------
+        v_neighborhood = float2(1,0); 
+        velocity_center = float2(1,0);
+    }
+    */
 
     // Above this pixel displacement, the center velocity overrides the neighborhood.
     // This ensures the overblurring occurs only on the interior of fast-moving objects
