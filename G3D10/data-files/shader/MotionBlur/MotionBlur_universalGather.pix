@@ -34,6 +34,7 @@ uniform sampler2D   neighborMinMax_buffer;
 uniform sampler2D	blurSourceBuffer;
 uniform float       lowResolutionFactor;
 uniform int         maxCoCRadiusPixels;
+uniform bool        isSpeedDirection;
 
 /** No guard band. */
 uniform sampler2D   colorBuffer;
@@ -111,8 +112,9 @@ float3 readAdjustedVelocity(int2 C, int2 A, sampler2D sampler, bool speedDirecti
     if (!speedDirection){
         q.xy = float2(-q.y, q.x);
         //r=0.0;
-        r=HALF_PIX;
-        //r=0.01;
+        //r=HALF_PIX;
+        r=0.01;
+        //q.z += 0.02;
     }
 
     float DoF_r = abs( (texelFetch(blurSourceBuffer, A, 0).a * 2.0) - 1.0 );
@@ -203,12 +205,14 @@ void main() {
 
     // Center pixel
     int2 me       = int2(gl_FragCoord.xy);
-    bool isSpeedDirection = true; //true;
+    //bool isSpeedDirection = true; //true;
 
     // Location of center pixel in the downsized 
     // Account for the scaling down to 50% of original dimensions during blur
 	//int2 A = int2(gl_FragCoord.xy * (direction * lowResolutionFactor + (ivec2(1) - direction)));
     int2 A = int2(gl_FragCoord.xy * lowResolutionFactor);
+    float DoF_r = abs( (texelFetch(blurSourceBuffer, A, 0).a * 2.0) - 1.0 );
+    DoF_r = float(maxCoCRadiusPixels) * DoF_r;
 
     // A pseudo-random number on [-0.5, 0.5]
     float jitter = hash(me) - 0.5;
@@ -225,7 +229,9 @@ void main() {
     float rmin_neighborhood;
     float totalCoverage = 0;
 
-for (int k = 0; k < 2; ++k){    // Loop for Speed direction and Cross Speed direction sampling
+// Loop for Speed direction and Cross Speed direction sampling
+//for (int k = 0; k < 2; ++k){    // Twice removes a lot of the value in surounding areas of the first pass. Implement real double pass to solve ?
+for (int k = 0; k < 1; ++k){    
 
 
     { 
@@ -249,11 +255,13 @@ for (int k = 0; k < 2; ++k){    // Loop for Speed direction and Cross Speed dire
     // Let w be a velocity direction (i.e., w is "omega", a unit vector in screen-space)
     // Let r be a half-velocity magnitude (i.e., a point-spread function radius)
     // If the center is moving very fast, sample along the center direction to avoid tile polution
-    float2 w_neighborhood = normalize((radius_center >= centerOverrideThresholdPixels) ? velocity_center : v_neighborhood);
+    //float2 w_neighborhood = normalize((radius_center >= centerOverrideThresholdPixels) ? velocity_center : v_neighborhood);
+    float2 w_neighborhood = normalize((radius_center >= centerOverrideThresholdPixels + DoF_r) ? velocity_center : v_neighborhood); // HUGO ----------------------
 
     // Choose the direction at this pixel to be the same as w_neighborhood if this pixel is not itself moving.
     // Don't adjust the radious--doing so causes the background to blur out when it is static.
-    float2 w_center = (radius_center < varianceThreshold) ? w_neighborhood : normalize(velocity_center);
+    //float2 w_center = (radius_center < varianceThreshold) ? w_neighborhood : normalize(velocity_center);
+    float2 w_center = (radius_center < varianceThreshold + DoF_r) ? w_neighborhood : normalize(velocity_center); // HUGO ----------------------
 
     // Accumulated color; start with the center sample
     // Higher initial weight increases the ability of the background
@@ -279,7 +287,8 @@ for (int k = 0; k < 2; ++k){    // Loop for Speed direction and Cross Speed dire
     // to avoid divergence.
     if ((rmin_neighborhood >= r_neighborhood) || 
         ((rmin_neighborhood >= r_neighborhood * 0.65) && (rmin_neighborhood >= 4))) {
-        //((rmin_neighborhood-r_dof >= (r_neighborhood-r_dof) * 0.65) && (rmin_neighborhood-r_dof >= 4))) { // HUGO --------------
+    //if (false) { // HUGO -----------------------------------------------------------------------------------------
+
         // Everything in this neighborhood is moving pretty fast; assume that
         // radius_sample == r_neighborhood and don't bother spending
         // bandwidth to actually read it per pixel
@@ -423,7 +432,7 @@ for (int i = 0; i < numSamplesOdd; ++i) {
 #       undef COMPUTE_RADIUS_SAMPLE
     }
 
-    isSpeedDirection = false;
+    //isSpeedDirection = false;
 } // End of loop for directions of sampling
 
     // We never divide by zero because we always sample the pixel itself.

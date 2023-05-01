@@ -114,7 +114,8 @@ namespace G3D {
         {
             const Rect2D& viewport = color->rect2DBounds();
             const float maxCoCRadiusPixels = ceil(camera->maxCircleOfConfusionRadiusPixels(viewport));
-            universalGatherBlur(rd, src, m_neighborMinMaxFramebuffer->texture(0), velocity, depth, m_packedBuffer, camera, numSamplesOdd, maxBlurRadiusPixels, maxCoCRadiusPixels, exposureTimeFraction, trimBandThickness);
+            universalGatherBlur(rd, src, m_neighborMinMaxFramebuffer->texture(0), velocity, depth, m_packedBuffer, camera, true, numSamplesOdd, maxBlurRadiusPixels, maxCoCRadiusPixels, exposureTimeFraction, trimBandThickness);
+            universalGatherBlur(rd, m_speedDirectionPassColorBuffer->texture(0), m_neighborMinMaxFramebuffer->texture(0), velocity, depth, m_packedBuffer, camera, false, numSamplesOdd, maxBlurRadiusPixels, maxCoCRadiusPixels, exposureTimeFraction, trimBandThickness);
         }
         else
         {
@@ -254,6 +255,7 @@ namespace G3D {
         const shared_ptr<Texture>& depth,
         const shared_ptr<Texture>& blurInput,
         const shared_ptr<Camera>& camera,
+        bool isSpeedDirection,
         int                               numSamplesOdd,
         int                               maxBlurRadiusPixels,
         float                             maxCoCRadiusPixels,
@@ -261,8 +263,11 @@ namespace G3D {
         Vector2int16                      trimBandThickness)
     {
 
+        std::shared_ptr<G3D::Framebuffer> output = isSpeedDirection ? m_speedDirectionPassColorBuffer : rd->drawFramebuffer();
+
         // Switch to 2D mode using the current framebuffer
-        rd->push2D(); {
+        //rd->push2D(); {
+        rd->push2D(output); { // HUGO ------------
             rd->clear(true, false, false);
             rd->setGuardBandClip2D(trimBandThickness);
 
@@ -284,6 +289,7 @@ namespace G3D {
             args.setMacro("numSamplesOdd", numSamplesOdd);
             args.setMacro("maxBlurRadius", maxBlurRadiusPixels);
             args.setUniform("maxCoCRadiusPixels", int(maxCoCRadiusPixels));
+            args.setUniform("isSpeedDirection", isSpeedDirection);
             args.setMacro("MODEL", camera->depthOfFieldSettings().model().toString());
 
             args.setUniform("depthBuffer", depth, Sampler::buffer());
@@ -330,10 +336,18 @@ namespace G3D {
             m_neighborMinMaxFramebuffer->texture(0)->visualization = m_tileMinMaxFramebuffer->texture(0)->visualization;
         }
 
+        if (isNull(m_speedDirectionPassColorBuffer))
+        {
+            m_speedDirectionPassColorBuffer = Framebuffer::create(Texture::createEmpty("G3D::MotionBlur::m_speedDirectionPassColorBuffer", w, h, ImageFormat::RGB16F(), Texture::DIM_2D, false));
+            m_speedDirectionPassColorBuffer->texture(0)->visualization = Texture::Visualization::unitVector();
+        }
+
         // Resize if needed
         m_tileMinMaxFramebuffer->resize(smallWidth, smallHeight);
         m_tileMinMaxTempFramebuffer->resize(h, smallWidth);
         m_neighborMinMaxFramebuffer->resize(smallWidth, smallHeight);
+
+        m_speedDirectionPassColorBuffer->resize(w, h);
     }
     
 

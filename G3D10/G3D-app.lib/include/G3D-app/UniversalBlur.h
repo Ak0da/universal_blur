@@ -59,6 +59,8 @@ namespace G3D {
             RG = max velocity in neighborhood, B = min speed in neighborhood */
         shared_ptr<Framebuffer>     m_neighborMinMaxFramebuffer;
 
+        shared_ptr<Framebuffer>     m_speedDirectionPassColorBuffer;
+
         /** 32x32 buffer of RG values on [0, 1) */
         shared_ptr<Texture>         m_randomBuffer;
 
@@ -84,6 +86,7 @@ namespace G3D {
             const shared_ptr<Texture>& depth,
             const shared_ptr<Texture>& blurInput,
             const shared_ptr<Camera>& camera,
+            bool isSpeedDirection,
             int                               numSamplesOdd,
             int                               maxBlurRadiusPixels,
             float                             exposureTimeFraction,
