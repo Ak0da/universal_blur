@@ -82,9 +82,12 @@ namespace G3D {
             const shared_ptr<Texture>& neighborMax,
             const shared_ptr<Texture>& velocity,
             const shared_ptr<Texture>& depth,
+            const shared_ptr<Texture>& blurInput,
+            const shared_ptr<Camera>& camera,
             int                               numSamplesOdd,
             int                               maxBlurRadiusPixels,
             float                             exposureTimeFraction,
+            float                             maxCoCRadiusPixels,
             Vector2int16                      trimBandThickness);
 
         /** Called from apply() to compute the blurry image to the current

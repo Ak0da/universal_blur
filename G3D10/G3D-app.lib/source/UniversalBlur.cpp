@@ -25,7 +25,8 @@ namespace G3D {
 
         // DoF Part of the function starts here ---------------------------------------------
         
-        if ((camera->depthOfFieldSettings().model() == DepthOfFieldModel::NONE)) {
+        //if ((camera->depthOfFieldSettings().model() == DepthOfFieldModel::NONE)) {
+        if (false) {
             const shared_ptr<Framebuffer>& f = rd->framebuffer();
             const shared_ptr<Framebuffer::Attachment>& a = f->get(Framebuffer::COLOR0);
 
@@ -43,11 +44,11 @@ namespace G3D {
             BEGIN_PROFILER_EVENT("G3D::UniversalBlur::DepthOfField::apply");
             resizeBuffers(color, camera->depthOfFieldSettings().reducedResolutionFactor(), trimBandThickness);
 
-            const Rect2D& viewport = color->rect2DBounds();
+            const Rect2D& viewport = color->rect2DBounds();//
 
             // Magic scaling factor for the artist mode depth of field model far-field radius
             float farRadiusRescale = 1.0f;
-            const float maxCoCRadiusPixels = ceil(camera->maxCircleOfConfusionRadiusPixels(viewport));
+            const float maxCoCRadiusPixels = ceil(camera->maxCircleOfConfusionRadiusPixels(viewport));//
             const bool diskFramebuffer = camera->depthOfFieldSettings().diskFramebuffer();
 
             debugAssert(maxCoCRadiusPixels >= 0.0f);
@@ -111,7 +112,9 @@ namespace G3D {
         computeNeighborMinMax(rd, m_tileMinMaxFramebuffer->texture(0));
         if (camera->universalBlurSettings().MbAlgorithm())
         {
-            universalGatherBlur(rd, src, m_neighborMinMaxFramebuffer->texture(0), velocity, depth, numSamplesOdd, maxBlurRadiusPixels, exposureTimeFraction, trimBandThickness);
+            const Rect2D& viewport = color->rect2DBounds();
+            const float maxCoCRadiusPixels = ceil(camera->maxCircleOfConfusionRadiusPixels(viewport));
+            universalGatherBlur(rd, src, m_neighborMinMaxFramebuffer->texture(0), velocity, depth, m_packedBuffer, camera, numSamplesOdd, maxBlurRadiusPixels, maxCoCRadiusPixels, exposureTimeFraction, trimBandThickness);
         }
         else
         {
@@ -249,8 +252,11 @@ namespace G3D {
         const shared_ptr<Texture>& neighborMax,
         const shared_ptr<Texture>& velocity,
         const shared_ptr<Texture>& depth,
+        const shared_ptr<Texture>& blurInput,
+        const shared_ptr<Camera>& camera,
         int                               numSamplesOdd,
         int                               maxBlurRadiusPixels,
+        float                             maxCoCRadiusPixels,
         float                             exposureTimeFraction,
         Vector2int16                      trimBandThickness)
     {
@@ -269,12 +275,16 @@ namespace G3D {
 
             neighborMax->setShaderArgs(args, "neighborMinMax_", Sampler::buffer());
 
+            args.setUniform("blurSourceBuffer", blurInput, Sampler::buffer());
             args.setUniform("colorBuffer", color, Sampler::buffer());
             args.setUniform("randomBuffer", m_randomBuffer, Sampler::buffer());
             args.setUniform("exposureTime", exposureTimeFraction);
+            args.setUniform("lowResolutionFactor", (float)camera->depthOfFieldSettings().reducedResolutionFactor());
 
             args.setMacro("numSamplesOdd", numSamplesOdd);
             args.setMacro("maxBlurRadius", maxBlurRadiusPixels);
+            args.setUniform("maxCoCRadiusPixels", int(maxCoCRadiusPixels));
+            args.setMacro("MODEL", camera->depthOfFieldSettings().model().toString());
 
             args.setUniform("depthBuffer", depth, Sampler::buffer());
 
@@ -482,7 +492,9 @@ namespace G3D {
             // In case the output is an unsigned format
             args.setUniform("writeScaleBias", Vector2(0.5f, 0.5f));
             args.setMacro("COMPUTE_PERCENT", camera->depthOfFieldSettings().diskFramebuffer() ? 100 : -1);
-            LAUNCH_SHADER("DepthOfField_circleOfConfusion.pix", args);
+
+            //LAUNCH_SHADER("DepthOfField_circleOfConfusion.pix", args);
+            LAUNCH_SHADER("DepthOfField_universalCircleOfConfusion.pix", args);
 
         } rd->pop2D();
     }
