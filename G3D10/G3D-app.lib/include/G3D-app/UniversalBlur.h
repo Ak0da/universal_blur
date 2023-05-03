@@ -60,6 +60,10 @@ namespace G3D {
         shared_ptr<Framebuffer>     m_neighborMinMaxFramebuffer;
 
         shared_ptr<Framebuffer>     m_speedDirectionPassColorBuffer;
+        //shared_ptr<Framebuffer>     m_colorBuffer;
+        //shared_ptr<Texture>         m_farColorBuffer;
+        //shared_ptr<Texture>         m_nearColorBuffer;
+
 
         /** 32x32 buffer of RG values on [0, 1) */
         shared_ptr<Texture>         m_randomBuffer;

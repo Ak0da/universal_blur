@@ -262,8 +262,38 @@ namespace G3D {
         float                             exposureTimeFraction,
         Vector2int16                      trimBandThickness)
     {
-
+        // Select temp buffer or draw buffer as output depending if it's the first or second pass
         std::shared_ptr<G3D::Framebuffer> output = isSpeedDirection ? m_speedDirectionPassColorBuffer : rd->drawFramebuffer();
+        //std::shared_ptr<G3D::Framebuffer> output = isSpeedDirection ? m_colorBuffer : rd->drawFramebuffer();
+
+        // Dimension along which the blur fraction is measured
+        const float dimension =
+            float((camera->fieldOfViewDirection() == FOVDirection::HORIZONTAL) ?
+                color->rect2DBounds().width() : color->rect2DBounds().height());
+        
+        // Compute the worst-case near plane blur
+        int nearBlurRadiusPixels;
+        {
+            float n = 0.0f;
+            if (camera->depthOfFieldSettings().model() == DepthOfFieldModel::ARTIST) {
+                n = camera->depthOfFieldSettings().nearBlurRadiusFraction() * dimension;
+            }
+            else {
+                n = -camera->circleOfConfusionRadiusPixels(
+                    min(camera->m_closestNearPlaneZForDepthOfField,
+                        camera->projection().nearPlaneZ()),
+                    color->rect2DBounds());
+            }
+
+            // Clamp to the maximum permitted radius for this camera
+            nearBlurRadiusPixels = iCeil(min(camera->m_viewportFractionMaxCircleOfConfusion * color->rect2DBounds().width(), n));
+
+            if (nearBlurRadiusPixels < camera->depthOfFieldSettings().reducedResolutionFactor() - 1) {
+                // Avoid ever showing the downsampled buffer without blur
+                nearBlurRadiusPixels = 0;
+            }
+        }
+        
 
         // Switch to 2D mode using the current framebuffer
         //rd->push2D(); {
@@ -283,14 +313,18 @@ namespace G3D {
             args.setUniform("blurSourceBuffer", blurInput, Sampler::buffer());
             args.setUniform("colorBuffer", color, Sampler::buffer());
             args.setUniform("randomBuffer", m_randomBuffer, Sampler::buffer());
+            //args.setUniform("nearColorBuffer", m_colorBuffer->texture(0), Sampler::buffer());
+            //args.setUniform("colorBuffer", m_colorBuffer->texture(1), Sampler::buffer());
             args.setUniform("exposureTime", exposureTimeFraction);
             args.setUniform("lowResolutionFactor", (float)camera->depthOfFieldSettings().reducedResolutionFactor());
+            args.setUniform("invNearBlurRadiusPixels", 1.0f / max(float(nearBlurRadiusPixels), 0.0001f));
 
             args.setMacro("numSamplesOdd", numSamplesOdd);
             args.setMacro("maxBlurRadius", maxBlurRadiusPixels);
             args.setUniform("maxCoCRadiusPixels", int(maxCoCRadiusPixels));
-            args.setUniform("isSpeedDirection", isSpeedDirection);
+            //args.setUniform("isSpeedDirection", isSpeedDirection);
             args.setMacro("MODEL", camera->depthOfFieldSettings().model().toString());
+            args.setMacro("SPEED_DIRECTION", isSpeedDirection ? 1 : 0);
 
             args.setUniform("depthBuffer", depth, Sampler::buffer());
 
@@ -342,12 +376,22 @@ namespace G3D {
             m_speedDirectionPassColorBuffer->texture(0)->visualization = Texture::Visualization::unitVector();
         }
 
+        /*
+        if (isNull(m_colorBuffer))
+        {
+            m_colorBuffer = Framebuffer::create(Texture::createEmpty("G3D::MotionBlur::m_nearColorBuffer", w, h, ImageFormat::RGBA16F(), Texture::DIM_2D, false));
+            m_colorBuffer->texture(0)->visualization = Texture::Visualization::unitVector();
+            m_colorBuffer->texture(1)->visualization = Texture::Visualization::unitVector();
+        }
+        */
+
         // Resize if needed
         m_tileMinMaxFramebuffer->resize(smallWidth, smallHeight);
         m_tileMinMaxTempFramebuffer->resize(h, smallWidth);
         m_neighborMinMaxFramebuffer->resize(smallWidth, smallHeight);
 
         m_speedDirectionPassColorBuffer->resize(w, h);
+        //m_colorBuffer->resize(w, h);
     }
     
 
