@@ -486,12 +486,13 @@ for (int i = 0; i < numSamplesOdd; ++i) {
     //coverage_sample += inFront; // Works to color background // HUGO ---------------------------------------------------------
     //coverage_sample += float(depth_center > depth_sample); // Works to color background // HUGO ---------------------------------------------------------
     
-    //coverage_sample += float(CoC_sample <= 0.25 && CoC_center <= 0.25); // Works to color background // HUGO ---------------------------------------------------------
+    coverage_sample += float(CoC_sample <= 0.25 && CoC_center <= 0.25); // Works to color background // HUGO ---------------------------------------------------------
     //coverage_sample += 10.0*float(CoC_sample >  0.25 && CoC_center <= 0.25); // Works to color background // HUGO ---------------------------------------------------------
     coverage_sample += float(CoC_sample >  0.25 && CoC_center <= 0.25); // Works to color background // HUGO ---------------------------------------------------------
-    //coverage_sample += float(CoC_sample >  0.25 && CoC_center >  0.25); // Works to color background // HUGO ---------------------------------------------------------
+    coverage_sample += float(CoC_sample >  0.25 && CoC_center >  0.25); // Works to color background // HUGO ---------------------------------------------------------
 
-    coverage_sample *= float(abs(dist) < radius_sample); // HUGO --------------------------------------
+    //coverage_sample *= float(abs(dist) < radius_sample); // HUGO --------------------------------------
+    coverage_sample *= float(abs(dist) < abs(CoC_sample*maxCoCRadiusPixels)); // HUGO --------------------------------------
 
     //coverage_sample += inFront * square(saturate(radius_sample*sign(radius_CoC_ratio)/maxCoCRadiusPixels)) + inBack * square(saturate(-radius_sample*sign(radius_CoC_ratio)/maxCoCRadiusPixels)) ; // Works to color background // HUGO ---------------------------------------------------------
     //coverage_sample += inFront * square(saturate(ratioDoF*radius_sample*sign(radius_CoC_ratio)/maxCoCRadiusPixels)) + inBack * square(saturate(-ratioDoF*radius_sample*sign(radius_CoC_ratio)/maxCoCRadiusPixels)) ; // Works to color background // HUGO ---------------------------------------------------------
