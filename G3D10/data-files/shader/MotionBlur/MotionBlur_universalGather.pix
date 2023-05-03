@@ -45,9 +45,6 @@ uniform float       invNearBlurRadiusPixels;
 
 /** No guard band. */
 uniform sampler2D   colorBuffer;
-#if !SPEED_DIRECTION
-uniform sampler2D   nearColorBuffer;
-#endif
 
 /** Typical hyperbolic depth buffer: close values are greater than distant values. Guard band. */
 uniform sampler2D   depthBuffer;
@@ -68,8 +65,11 @@ float2              jitter;
    Make this bigger to get smoother blur (less noise) */
 #define varianceThreshold 1.5
 
+#if SPEED_DIRECTION
+out float4 resultColor;
+#else
 out float3 resultColor;
-
+#endif
 /*
 #if SPEED_DIRECTION // HUGO ---------------------------------------
 #if __VERSION__ < 130   // HUGO ---------------------------------------
@@ -256,8 +256,11 @@ void main() {
     
     
 
-    float3 centerColor = texelFetch(colorBuffer, me - trimBandThickness, 0).rgb;
-    resultColor = vec3(0);
+    float4 centerColor = texelFetch(colorBuffer, me - trimBandThickness, 0);
+    resultColor.rgb = vec3(0);
+#if SPEED_DIRECTION
+    resultColor.a = -1.0;
+#endif
     float totalCoverage = 0;
     float totalCoverageNear = 0;
     float4 resultColorNear;
@@ -316,7 +319,7 @@ void main() {
     float initialCoverage = (float(numSamplesOdd) / 40.0) * invRadius_center; // HUGO -------------------------------
     //float initialCoverage = 0.001;
     totalCoverage += initialCoverage;  // HUGO --------------------
-    resultColor.rgb += centerColor*initialCoverage;
+    resultColor.rgb += centerColor.rgb*initialCoverage;
 
     float radius_sample = r_neighborhood;
     float radius_CoC_ratio = r_neighborhood_CoC_ratio;
@@ -471,12 +474,15 @@ for (int i = 0; i < numSamplesOdd; ++i) {
     float inFront = softDepthCompare(depth_center, depth_sample);
     float inBack  = softDepthCompare(depth_sample, depth_center);
 
+    float4 color_sample    = texelFetch(colorBuffer, clamp(other - trimBandThickness, ivec2(0), NO_TRIM_BAND_SCREEN_MAX), 0);
+
     // Relative contribution of sample to the center
     float coverage_sample = 0.0;
 
     float ratioDoF = abs(radius_CoC_ratio);
     float ratioMB = 1.0-ratioDoF;
     float CoC_sample = texelFetch(blurSourceBuffer, other, 0).a * 2.0 - 1.0;
+    float nearFieldBorder = 0.25;
 
     // Blurry me, estimate background
     //coverage_sample += inBack * fastCone(dist, invRadius_center);
@@ -486,13 +492,26 @@ for (int i = 0; i < numSamplesOdd; ++i) {
     //coverage_sample += inFront; // Works to color background // HUGO ---------------------------------------------------------
     //coverage_sample += float(depth_center > depth_sample); // Works to color background // HUGO ---------------------------------------------------------
     
-    coverage_sample += float(CoC_sample <= 0.25 && CoC_center <= 0.25); // Works to color background // HUGO ---------------------------------------------------------
-    //coverage_sample += 10.0*float(CoC_sample >  0.25 && CoC_center <= 0.25); // Works to color background // HUGO ---------------------------------------------------------
-    coverage_sample += float(CoC_sample >  0.25 && CoC_center <= 0.25); // Works to color background // HUGO ---------------------------------------------------------
-    coverage_sample += float(CoC_sample >  0.25 && CoC_center >  0.25); // Works to color background // HUGO ---------------------------------------------------------
+    coverage_sample += float(CoC_sample <= nearFieldBorder && CoC_center <= nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
+    coverage_sample += float(CoC_sample >  nearFieldBorder && CoC_center <= nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
+    coverage_sample += float(CoC_sample >  nearFieldBorder && CoC_center >  nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
+
+#if SPEED_DIRECTION // HUGO ---------------------------------------------------------------------------------------
+    float reach = abs(CoC_sample*maxCoCRadiusPixels);
+    resultColor.a = max(resultColor.a, saturate(CoC_sample*float(abs(dist) < reach)) );
+    coverage_sample *= float(abs(dist) < reach);
+
+#else
+/*
+    float reach = abs(color_sample.a*maxCoCRadiusPixels);
+    coverage_sample *= float(abs(dist) < reach);
+*/
+    float reach = max(abs(color_sample.a*maxCoCRadiusPixels) , abs(CoC_sample*maxCoCRadiusPixels));
+    coverage_sample *= float(abs(dist) < reach);
+#endif
 
     //coverage_sample *= float(abs(dist) < radius_sample); // HUGO --------------------------------------
-    coverage_sample *= float(abs(dist) < abs(CoC_sample*maxCoCRadiusPixels)); // HUGO --------------------------------------
+    //coverage_sample *= float(abs(dist) < abs(CoC_sample*maxCoCRadiusPixels)); // HUGO --------------------------------------
 
     //coverage_sample += inFront * square(saturate(radius_sample*sign(radius_CoC_ratio)/maxCoCRadiusPixels)) + inBack * square(saturate(-radius_sample*sign(radius_CoC_ratio)/maxCoCRadiusPixels)) ; // Works to color background // HUGO ---------------------------------------------------------
     //coverage_sample += inFront * square(saturate(ratioDoF*radius_sample*sign(radius_CoC_ratio)/maxCoCRadiusPixels)) + inBack * square(saturate(-ratioDoF*radius_sample*sign(radius_CoC_ratio)/maxCoCRadiusPixels)) ; // Works to color background // HUGO ---------------------------------------------------------
@@ -502,7 +521,7 @@ for (int i = 0; i < numSamplesOdd; ++i) {
 
     COMPUTE_RADIUS_SAMPLE();
 
-    float3 color_sample    = texelFetch(colorBuffer, clamp(other - trimBandThickness, ivec2(0), NO_TRIM_BAND_SCREEN_MAX), 0).rgb;
+    //float3 color_sample    = texelFetch(colorBuffer, clamp(other - trimBandThickness, ivec2(0), NO_TRIM_BAND_SCREEN_MAX), 0).rgb;
 
     // Blurry other over any me
     //coverage_sample += inFront * cone(dist, radius_sample);
@@ -567,7 +586,7 @@ for (int i = 0; i < numSamplesOdd; ++i) {
     */
 
     // Accumulate (with premultiplied coverage)
-    resultColor   += color_sample * coverage_sample;
+    resultColor.rgb   += color_sample.rgb * coverage_sample;
     totalCoverage += coverage_sample;
 }
 #       undef COMPUTE_RADIUS_SAMPLE
@@ -643,8 +662,16 @@ for (int i = 0; i < numSamplesOdd; ++i) {
     */
 
     // We never divide by zero because we always sample the pixel itself.
-    resultColor /= totalCoverage;
+    //resultColor /= totalCoverage;
     // HUGO ------------------------------------------------------------------------
     //resultColor = result;
     //resultColor = vec3(CoC_center*0.5+0.5);
+    
+
+#if SPEED_DIRECTION
+    resultColor.rgb /= totalCoverage;
+#else
+    resultColor.rgb /= totalCoverage;
+    //resultColor = vec3(centerColor.a*0.5+0.5);
+#endif
 }

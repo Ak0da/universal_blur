@@ -372,7 +372,7 @@ namespace G3D {
 
         if (isNull(m_speedDirectionPassColorBuffer))
         {
-            m_speedDirectionPassColorBuffer = Framebuffer::create(Texture::createEmpty("G3D::MotionBlur::m_speedDirectionPassColorBuffer", w, h, ImageFormat::RGB16F(), Texture::DIM_2D, false));
+            m_speedDirectionPassColorBuffer = Framebuffer::create(Texture::createEmpty("G3D::MotionBlur::m_speedDirectionPassColorBuffer", w, h, ImageFormat::RGBA16F(), Texture::DIM_2D, false));
             m_speedDirectionPassColorBuffer->texture(0)->visualization = Texture::Visualization::unitVector();
         }
 
