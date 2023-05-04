@@ -110,10 +110,17 @@ float square(float x) { return x * x; }
 */
 //float3 readAdjustedVelocity(int2 C, sampler2D sampler, out float r) {
 float3 readAdjustedVelocity(int2 C, int2 A, sampler2D sampler, out float r, out float CoC_ratio) { // HUGO ---------------------------------
-
+    
 	// Raw screen-space movement
+
     float3 q = texelFetch(sampler, C, 0).xyz * SS_POSITION_CHANGE_readMultiplyFirst.xyz + SS_POSITION_CHANGE_readAddSecond.xyz;
+#if !MOTION_BLUR
+    //q.xy = normalize(q.xy);
+    q.xy = float2(1.0, 0.0);
+    r = 0.01;
+#else
     float lenq = length(q.xy);
+
 
     // Convert the velocity to be a radius instead of a diameter, and scale it by
 	// the exposure time
@@ -131,11 +138,11 @@ float3 readAdjustedVelocity(int2 C, int2 A, sampler2D sampler, out float r, out 
         // Adjust q's length based on the newly clamped radius
         q.xy *= (r / lenq);
     }
-#if DEPTH_OF_FIELD
     else
     {
         q.xy = float2(1.0, 0.0);
     }
+#endif // !MOTION_BLUR
 
 #if !SPEED_DIRECTION
     //if (!speedDirection){
@@ -144,6 +151,8 @@ float3 readAdjustedVelocity(int2 C, int2 A, sampler2D sampler, out float r, out 
         r=0.01;
     //}
 #endif
+
+#if DEPTH_OF_FIELD
 
     //float DoF_r = abs( (texelFetch(blurSourceBuffer, A, 0).a * 2.0) - 1.0 );
     //r += float(maxCoCRadiusPixels) * DoF_r;
@@ -155,6 +164,7 @@ float3 readAdjustedVelocity(int2 C, int2 A, sampler2D sampler, out float r, out 
     CoC_ratio = DoF_r/r;
     //r *= sign(DoF_r);
 #endif
+
     return q;
 }
 
@@ -266,6 +276,7 @@ void main() {
 #if SPEED_DIRECTION
     resultColor.a = -1.0;
 #endif
+
     float totalCoverage = 0;
     float totalCoverageNear = 0;
     float4 resultColorNear;
@@ -294,13 +305,19 @@ void main() {
     float CoC_ratio_center;
     //float2 velocity_center = readAdjustedVelocity(me, radius_center).xy;
     float2 velocity_center = readAdjustedVelocity(me, A, radius_center, CoC_ratio_center).xy; // HUGO ---------------------------------
+    
+    /////////////////////////////////////////////////////////////////////////// DEBUG
+    //resultColor.rgb = vec3(radius_center/50.0);
+    //return;
+
+    /*
     {
     #if !MOTION_BLUR
         float ratioDoF = abs(CoC_ratio_center);
         radius_center *= ratioDoF;
     #endif
     }
-
+    */
 
     // Above this pixel displacement, the center velocity overrides the neighborhood.
     // This ensures the overblurring occurs only on the interior of fast-moving objects
@@ -480,7 +497,8 @@ for (int i = 0; i < numSamplesOdd; ++i) {
     int2 other = clamp(int2(offset + gl_FragCoord.xy), trimBandThickness, SCREEN_MAX);
     int2 B = int2((offset + gl_FragCoord.xy) * lowResolutionFactor);
 
-    COMPUTE_RADIUS_SAMPLE();
+    //COMPUTE_RADIUS_SAMPLE();
+    float2 velocity_sample = readAdjustedVelocity(other, B, radius_sample, radius_CoC_ratio).xy;
 
     float depth_sample = texelFetch(depthBuffer, other, 0).x;
 
@@ -502,17 +520,20 @@ for (int i = 0; i < numSamplesOdd; ++i) {
     //const float nearFieldTransition = 0.35;
     //const float farFieldTransition = 0.0;
 
-
+/*
 #if !MOTION_BLUR
     //radius_sample *= ratioDoF;
     radius_sample = abs(CoC_sample*maxCoCRadiusPixels);
 #endif
+*/
     
+#if DEPTH_OF_FIELD
+    
+
     //coverage_sample += float(CoC_sample <= nearFieldBorder && CoC_center <= nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
     //coverage_sample += float(CoC_sample >  nearFieldBorder && CoC_center <= nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
     //coverage_sample += float(CoC_sample >  nearFieldBorder && CoC_center >  nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
-    
-#if DEPTH_OF_FIELD
+
     coverage_sample += float(CoC_sample <= superNearFieldBorder && CoC_center <= nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
     coverage_sample += float(CoC_sample >  nearFieldBorder && CoC_center <= nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
     coverage_sample += float(CoC_sample >  nearFieldBorder && CoC_center >  nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
@@ -547,16 +568,17 @@ for (int i = 0; i < numSamplesOdd; ++i) {
 
 
 #if MOTION_BLUR && SPEED_DIRECTION
+    float mbCoverage = 0;
     //coverage_sample += radius_sample*ratioMB/maxCoCRadiusPixels;
 
     // Blurry me, estimate background
-    coverage_sample += inBack * fastCone(dist, invRadius_center);
+    mbCoverage += inBack * fastCone(dist, invRadius_center);
 
     // Blurry other over any me
-    coverage_sample += inFront * cone(dist, radius_sample);
+    mbCoverage += inFront * cone(dist, radius_sample);
 
     // Mutually blurry me and other
-    coverage_sample += 
+    mbCoverage += 
         //0.0; // HUGO -------------------------------------------------------------------------------------- 
 		// Optimized implementation
 		cylinder(dist, min(radius_center, radius_sample)) * 2.0;
@@ -566,8 +588,14 @@ for (int i = 0; i < numSamplesOdd; ++i) {
 //       coverage_sample = saturate(dot(normalize(velocity_sample), sampling_direction));
 		// Code from paper:
 		// cylinder(dist, radius_center) * cylinder(dist, radius_sample) * 2.0;
-#endif
 
+    reach = abs(radius_sample);
+    coverage_sample += mbCoverage * float(abs(dist) < reach) ;
+#endif
+    
+    /////////////////////////////////////////////////////////////////////////// DEBUG
+    //resultColor.rgb = vec3(radius_sample/50.0);
+    //return;
     
 
     //float3 color_sample    = texelFetch(colorBuffer, clamp(other - trimBandThickness, ivec2(0), NO_TRIM_BAND_SCREEN_MAX), 0).rgb;
@@ -584,44 +612,7 @@ for (int i = 0; i < numSamplesOdd; ++i) {
     //coverage_sample = float(max(radius_sample, radius_center) > abs(dist)); // HUGO ---------------------------------------------------------------------------------------
     //coverage_sample = cylinder(dist, max(radius_center, radius_sample))/(abs(dist)+0.01); // HUGO ---------------------------------------------------------------------------------------
 
-    /*
-    {// HUGO EXPERIMENT ---------------------------------------------------------------------------------- 
-        
-        
-        //float r_A = radius_center*CoC_ratio_center;
-        //float r_B = radius_sample*radius_CoC_ratio;
-        float packedA = texelFetch(blurSourceBuffer, A, 0).a;
-        float r_A = (packedA * 2.0 - 1.0) * float(maxCoCRadiusPixels);
-        float packedB = texelFetch(blurSourceBuffer, other, 0).a;
-        float r_B = (packedB * 2.0 - 1.0) * float(maxCoCRadiusPixels);
-        float nearFieldness_A = saturate(r_A * 4.0);
-        float invB = 1.0 / (0.01 + abs(r_B));
-        float wNormal  =
-            // Only consider mid- or background pixels (allows inpainting of the near-field)
-            float(! inNearField(r_B)) *
-            
-            // Only blur B over A if B is closer to the viewer (allow a few pixels of slop, and smooth the transition)
-			// This term avoids "glowy" background objects OR both are *really* blurry in the far field
-            saturate(max(r_B - r_A + 1.0, (0.01 - r_A) * invB)) *
-           
-            // Gaussian kernel of "radius" based on pixel B.
-            exp(-square(dist * 1.4142 / r_B));
-        coverage_sample += lerp(wNormal, 1.0, nearFieldness_A);
 
-
-        float4 near;
-#if SPEED_DIRECTION
-        near.a = square(saturate(r_B * invNearBlurRadiusPixels));
-        near.rgb = centerColor * near.a;
-#else
-        near = texelFetch(nearColorBuffer, clamp(other, int2(0), textureSize(nearColorBuffer, 0) - int2(1)), 0);
-#endif
-        float weightNear = exp(-square(dist * invNearBlurRadiusPixels));
-
-        totalCoverageNear += weightNear;
-        resultColorNear += near * weightNear;
-    }
-    */
 
     // Accumulate (with premultiplied coverage)
     resultColor.rgb   += color_sample.rgb * coverage_sample;
@@ -630,74 +621,7 @@ for (int i = 0; i < numSamplesOdd; ++i) {
 #       undef COMPUTE_RADIUS_SAMPLE
     }
 
-    /*
-
-#   if SPEED_DIRECTION
-        // Retain the packed radius on the first pass.  On the second pass it is not needed.
-        blurResult.a = packedA;
-#   else
-        // Vertical, second pass
-        //blurResult.a = 1.0;
-#   endif
-
-    // Normalize the blur
-    blurResult.rgb /= blurWeightSum;
-    nearResult     /= max(nearWeightSum, 0.000001); 
     
-#   if ! SPEED_DIRECTION
-
-    // Boost the coverage of the near field by this factor.  Should always be >= 1
-    //
-    // Make this larger if near-field objects seem too transparent
-    //
-    // Make this smaller if an obvious line is visible between the near-field blur and the mid-field sharp region
-    // when looking at a textured ground plane.
-
-    {
-        // Needs to increase with field of view
-        float coverageBoost = fieldOfView;
-        // Increase near field coverage. We can't just scale by coverageBoost
-        // even though we're using premultiplied alpha because there
-        // is nonlinear clamping of alpha at 1.0. 
-        
-        // If this minimum value is too large, then there will be an intensity
-        // dip when compositing the premultiplied-alpha value, since it will not
-        // be correctly premultiplied.
-        const float minimumValue = 0.000001;
-        
-        float oldAlpha = nearResult.a;
-        float newAlpha = clamp(smoothstep(oldAlpha, 0.0, 0.025 / coverageBoost), minimumValue, 1.0);
-
-        nearResult.rgb = nearResult.rgb * (max(minimumValue, newAlpha) / max(oldAlpha, minimumValue));
-        nearResult.a = newAlpha;
-    }
-#   endif
-
-
-
-
-#if SPEED_DIRECTION
-    resultColor /= totalCoverage;
-    nearResult = resultColorNear/totalCoverageNear;
-#else
-    float3 result;
-    {// HUGO EXPERIMENT -----------------------------------------------------------------------------------
-        float3 blurry = blurResult/totalCoverage;
-        float4 blurryNear = resultColorNear/totalCoverageNear;
-        float normRadius = (CoC_ratio_center*radius_center/float(maxCoCRadiusPixels)); //* 0.5 + 0.5;
-        result = max(lerp(centerColor, 
-                      blurry,
-                      saturate(-12.0 * normRadius)) * (1.0 - blurryNear.a),
-                      //1 - saturate(-12.0 * normRadius)) * (1.0 - blurryNear.a),
-                      //saturate(-12.0 * normRadius)) ,
-                vec3(0)) + blurryNear.rgb;
-
-        //resultColor = vec3(saturate(-12.0 * normRadius));
-        //resultColor = resultColor/totalCoverage;
-        blurResult = result;
-    }
-#endif
-    */
 
     // We never divide by zero because we always sample the pixel itself.
     //resultColor /= totalCoverage;
