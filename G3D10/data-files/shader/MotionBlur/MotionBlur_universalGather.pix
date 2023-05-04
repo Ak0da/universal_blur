@@ -497,7 +497,8 @@ for (int i = 0; i < numSamplesOdd; ++i) {
     coverage_sample += float(CoC_sample <= superNearFieldBorder && CoC_center <= nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
     coverage_sample += float(CoC_sample >  nearFieldBorder && CoC_center <= nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
     coverage_sample += float(CoC_sample >  nearFieldBorder && CoC_center >  nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
-    
+
+
     /*
     float far_far = float(CoC_sample <= farFieldTransition && CoC_center <= farFieldTransition);
     float near_far = float(CoC_sample >  nearFieldTransition && CoC_center <= farFieldTransition);
@@ -520,7 +521,7 @@ for (int i = 0; i < numSamplesOdd; ++i) {
     coverage_sample *= float(abs(dist) < reach);
 */
     float reach = max(abs(color_sample.a*maxCoCRadiusPixels) , abs(CoC_sample*maxCoCRadiusPixels));
-    coverage_sample *= float(abs(dist) < reach);
+    coverage_sample *= float(abs(dist) < reach) * exp(-square(dist * invNearBlurRadiusPixels));
 #endif
 
     //coverage_sample *= float(abs(dist) < radius_sample); // HUGO --------------------------------------
