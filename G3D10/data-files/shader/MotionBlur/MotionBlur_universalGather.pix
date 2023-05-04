@@ -117,7 +117,7 @@ float3 readAdjustedVelocity(int2 C, int2 A, sampler2D sampler, out float r, out 
 #if !MOTION_BLUR
     //q.xy = normalize(q.xy);
     q.xy = float2(1.0, 0.0);
-    r = 0.01;
+    r = 0.1;
 #else
     float lenq = length(q.xy);
 
@@ -148,7 +148,7 @@ float3 readAdjustedVelocity(int2 C, int2 A, sampler2D sampler, out float r, out 
     //if (!speedDirection){
         q.xy = float2(-q.y, q.x);
         //r=HALF_PIX;
-        r=0.01;
+        r=0.1;
     //}
 #endif
 
@@ -551,8 +551,15 @@ for (int i = 0; i < numSamplesOdd; ++i) {
 
 #if SPEED_DIRECTION // HUGO ---------------------------------------------------------------------------------------
     //float reach = abs(CoC_sample*maxCoCRadiusPixels);
-    float reach = abs(radius_sample);
-    resultColor.a = max(resultColor.a, saturate(CoC_sample*float(abs(dist) < reach)) );
+    
+    //float reach = abs(radius_sample);
+    float reach = ratioMB * radius_sample/2 + abs(CoC_sample)*maxCoCRadiusPixels;   // Add only half of the speed as increased reach
+    float isInReach = float(abs(dist) < reach);
+    //resultColor.a = max(resultColor.a, saturate(CoC_sample*float(abs(dist) < reach)) );
+    //resultColor.a = max(resultColor.a, saturate(CoC_sample*isInReach));
+    float cornerRad = (reach - abs(dist))/reach;
+    resultColor.a = max(resultColor.a, saturate(cornerRad*isInReach));
+
     //coverage_sample *= float(abs(dist) < reach);
     coverage_sample *= float(abs(dist) < reach) * exp(-square(dist * invNearBlurRadiusPixels));
 
@@ -563,7 +570,8 @@ for (int i = 0; i < numSamplesOdd; ++i) {
     coverage_sample *= float(abs(dist) < reach);
 */
     float reach = max(abs(color_sample.a*maxCoCRadiusPixels) , abs(CoC_sample*maxCoCRadiusPixels));
-    coverage_sample *= float(abs(dist) < reach) * exp(-square(dist * invNearBlurRadiusPixels));
+    //coverage_sample *= float(abs(dist) < reach) * exp(-square(dist * invNearBlurRadiusPixels));
+    coverage_sample *= float(abs(dist)*1.4142 < reach) * exp(-square(dist * invNearBlurRadiusPixels));
 #endif
 
 
@@ -590,7 +598,8 @@ for (int i = 0; i < numSamplesOdd; ++i) {
 		// cylinder(dist, radius_center) * cylinder(dist, radius_sample) * 2.0;
 
     reach = abs(radius_sample);
-    coverage_sample += mbCoverage * float(abs(dist) < reach) ;
+    //coverage_sample += mbCoverage * float(abs(dist) < reach) ;
+    coverage_sample += 0.33 * mbCoverage * float(abs(dist) < reach) ;
 #endif
     
     /////////////////////////////////////////////////////////////////////////// DEBUG
