@@ -482,24 +482,37 @@ for (int i = 0; i < numSamplesOdd; ++i) {
     float ratioDoF = abs(radius_CoC_ratio);
     float ratioMB = 1.0-ratioDoF;
     float CoC_sample = texelFetch(blurSourceBuffer, other, 0).a * 2.0 - 1.0;
-    float nearFieldBorder = 0.25;
+    const float nearFieldBorder = 0.25;
+    const float superNearFieldBorder = 0.50;
+    //const float nearFieldTransition = 0.35;
+    //const float farFieldTransition = 0.0;
 
     // Blurry me, estimate background
     //coverage_sample += inBack * fastCone(dist, invRadius_center);
-    //coverage_sample += inBack * cone(dist, max(radius_sample,radius_center)); // HUGO ---------------------------------------------------------
-    //coverage_sample += inBack * cone(dist, max(radius_sample,radius_center)); // HUGO ---------------------------------------------------------
-    //coverage_sample += float(depth_sample<depth_center); // Works to color background // HUGO ---------------------------------------------------------
-    //coverage_sample += inFront; // Works to color background // HUGO ---------------------------------------------------------
-    //coverage_sample += float(depth_center > depth_sample); // Works to color background // HUGO ---------------------------------------------------------
     
-    coverage_sample += float(CoC_sample <= nearFieldBorder && CoC_center <= nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
+    //coverage_sample += float(CoC_sample <= nearFieldBorder && CoC_center <= nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
+    //coverage_sample += float(CoC_sample >  nearFieldBorder && CoC_center <= nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
+    //coverage_sample += float(CoC_sample >  nearFieldBorder && CoC_center >  nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
+    
+    coverage_sample += float(CoC_sample <= superNearFieldBorder && CoC_center <= nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
     coverage_sample += float(CoC_sample >  nearFieldBorder && CoC_center <= nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
     coverage_sample += float(CoC_sample >  nearFieldBorder && CoC_center >  nearFieldBorder); // Works to color background // HUGO ---------------------------------------------------------
+    
+    /*
+    float far_far = float(CoC_sample <= farFieldTransition && CoC_center <= farFieldTransition);
+    float near_far = float(CoC_sample >  nearFieldTransition && CoC_center <= farFieldTransition);
+    float near_near = float(CoC_sample >  nearFieldTransition && CoC_center >  nearFieldTransition);
+
+    coverage_sample +=  lerp(far_far, near_far, (nearFieldTransition-CoC_sample)/(nearFieldTransition-nearFieldBorder));// Works to color background // HUGO ---------------------------------------------------------
+    coverage_sample +=  lerp(near_far, near_near, (CoC_center-nearFieldTransition)/(nearFieldBorder-farFieldTransition));// Works to color background // HUGO ---------------------------------------------------------
+    */
 
 #if SPEED_DIRECTION // HUGO ---------------------------------------------------------------------------------------
     float reach = abs(CoC_sample*maxCoCRadiusPixels);
     resultColor.a = max(resultColor.a, saturate(CoC_sample*float(abs(dist) < reach)) );
-    coverage_sample *= float(abs(dist) < reach);
+    //coverage_sample *= float(abs(dist) < reach);
+    coverage_sample *= float(abs(dist) < reach) * exp(-square(dist * invNearBlurRadiusPixels));
+
 
 #else
 /*
