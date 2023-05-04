@@ -19,6 +19,7 @@ namespace G3D {
     private:
         bool                        m_enabled;
         bool                        m_MbAlgorithm;
+        bool                        m_DofAlgorithm;
 
     public:
 
@@ -47,6 +48,14 @@ namespace G3D {
 
         void setMbAlgorithm(bool e) {
             m_MbAlgorithm = e;
+        }
+
+        bool DofAlgorithm() const {
+            return m_DofAlgorithm;
+        }
+
+        void setDofAlgorithm(bool e) {
+            m_DofAlgorithm = e;
         }
 
     };

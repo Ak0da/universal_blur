@@ -279,6 +279,12 @@ CameraControlWindow::CameraControlWindow
                 Pointer<bool>(&m_camera->universalBlurSettings(),
                     &UniversalBlurSettings::MbAlgorithm,
                     &UniversalBlurSettings::setMbAlgorithm));
+
+            uBlurPane->addCheckBox
+            ("Use depth of field algorithm",
+                Pointer<bool>(&m_camera->universalBlurSettings(),
+                    &UniversalBlurSettings::DofAlgorithm,
+                    &UniversalBlurSettings::setDofAlgorithm));
         }
     }
 

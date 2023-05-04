@@ -25,18 +25,6 @@ namespace G3D {
 
         // DoF Part of the function starts here ---------------------------------------------
         
-        //if ((camera->depthOfFieldSettings().model() == DepthOfFieldModel::NONE)) {
-        if (false) {
-            const shared_ptr<Framebuffer>& f = rd->framebuffer();
-            const shared_ptr<Framebuffer::Attachment>& a = f->get(Framebuffer::COLOR0);
-
-            if (isNull(f) || (a->texture() != color)) {
-                Texture::copy(color, a->texture(), 0, 0, 1.0f, trimBandThickness, CubeFace::POS_X, CubeFace::POS_X, rd, false);
-            }
-
-            // Exit abruptly because DoF is disabled
-        }
-        else
         {
             alwaysAssertM(notNull(color), "Color buffer may not be nullptr");
             alwaysAssertM(notNull(depth), "Depth buffer may not be nullptr");
@@ -110,17 +98,13 @@ namespace G3D {
 
         computeTileMinMax(rd, velocity, maxBlurRadiusPixels, trimBandThickness);
         computeNeighborMinMax(rd, m_tileMinMaxFramebuffer->texture(0));
-        if (camera->universalBlurSettings().MbAlgorithm())
-        {
-            const Rect2D& viewport = color->rect2DBounds();
-            const float maxCoCRadiusPixels = ceil(camera->maxCircleOfConfusionRadiusPixels(viewport));
-            universalGatherBlur(rd, src, m_neighborMinMaxFramebuffer->texture(0), velocity, depth, m_packedBuffer, camera, true, numSamplesOdd, maxBlurRadiusPixels, maxCoCRadiusPixels, exposureTimeFraction, trimBandThickness);
-            universalGatherBlur(rd, m_speedDirectionPassColorBuffer->texture(0), m_neighborMinMaxFramebuffer->texture(0), velocity, depth, m_packedBuffer, camera, false, numSamplesOdd, maxBlurRadiusPixels, maxCoCRadiusPixels, exposureTimeFraction, trimBandThickness);
-        }
-        else
-        {
-            gatherBlur(rd, src, m_neighborMinMaxFramebuffer->texture(0), velocity, depth, numSamplesOdd, maxBlurRadiusPixels, exposureTimeFraction, trimBandThickness);
-        }
+        
+        const Rect2D& viewport = color->rect2DBounds();
+        const float maxCoCRadiusPixels = ceil(camera->maxCircleOfConfusionRadiusPixels(viewport));
+        universalGatherBlur(rd, src, m_neighborMinMaxFramebuffer->texture(0), velocity, depth, m_packedBuffer, camera, true, numSamplesOdd, maxBlurRadiusPixels, maxCoCRadiusPixels, exposureTimeFraction, trimBandThickness);
+        universalGatherBlur(rd, m_speedDirectionPassColorBuffer->texture(0), m_neighborMinMaxFramebuffer->texture(0), velocity, depth, m_packedBuffer, camera, false, numSamplesOdd, maxBlurRadiusPixels, maxCoCRadiusPixels, exposureTimeFraction, trimBandThickness);
+        
+        
 
 
         if (m_debugShowTiles) {
@@ -325,6 +309,8 @@ namespace G3D {
             //args.setUniform("isSpeedDirection", isSpeedDirection);
             args.setMacro("MODEL", camera->depthOfFieldSettings().model().toString());
             args.setMacro("SPEED_DIRECTION", isSpeedDirection ? 1 : 0);
+            args.setMacro("MOTION_BLUR", camera->universalBlurSettings().MbAlgorithm());
+            args.setMacro("DEPTH_OF_FIELD", camera->universalBlurSettings().DofAlgorithm());
 
             args.setUniform("depthBuffer", depth, Sampler::buffer());
 
