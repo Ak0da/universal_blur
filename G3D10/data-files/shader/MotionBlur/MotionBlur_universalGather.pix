@@ -347,7 +347,7 @@ void main() {
     float invRadius_center = 1.0 / radius_center; 
     // float totalCoverage = (float(numSamplesOdd) / 40.0) * invRadius_center;
     // resultColor *= totalCoverage;
-    float initialCoverage = (float(numSamplesOdd) / 40.0) * invRadius_center; // HUGO -------------------------------
+    float initialCoverage = 2.0; // HUGO -------------------------------
     //float initialCoverage = 0.001;
     totalCoverage += initialCoverage;  // HUGO --------------------
     resultColor.rgb += centerColor.rgb*initialCoverage;
@@ -602,7 +602,8 @@ for (int i = 0; i < numSamplesOdd; ++i) {
 		// Code from paper:
 		// cylinder(dist, radius_center) * cylinder(dist, radius_sample) * 2.0;
 
-    reach = abs(radius_sample);
+    //reach = abs(radius_sample);
+    reach = abs(radius_sample)*ratioMB;
     //coverage_sample += mbCoverage * float(abs(dist) < reach) ;
     coverage_sample += 0.33 * mbCoverage * float(abs(dist) < reach) ;
 #endif
