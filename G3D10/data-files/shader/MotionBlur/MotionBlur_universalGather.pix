@@ -111,14 +111,14 @@ float square(float x) { return x * x; }
 //float3 readAdjustedVelocity(int2 C, sampler2D sampler, out float r) {
 float3 readAdjustedVelocity(int2 C, int2 A, sampler2D sampler, out float r, out float CoC_ratio) { // HUGO ---------------------------------
     
-	// Raw screen-space movement
-
-    float3 q = texelFetch(sampler, C, 0).xyz * SS_POSITION_CHANGE_readMultiplyFirst.xyz + SS_POSITION_CHANGE_readAddSecond.xyz;
+	
 #if !MOTION_BLUR
     //q.xy = normalize(q.xy);
-    q.xy = float2(1.0, 0.0);
+    float3 q = float3(1.0, 0.0, 0.0);
     r = 0.01;
 #else
+    // Raw screen-space movement
+    float3 q = texelFetch(sampler, C, 0).xyz * SS_POSITION_CHANGE_readMultiplyFirst.xyz + SS_POSITION_CHANGE_readAddSecond.xyz;
     float lenq = length(q.xy);
 
 
@@ -454,7 +454,8 @@ for (int i = 0; i < numSamplesOdd; ++i) {
 
     // Accumulate (with premultiplied coverage)
     //resultColor   += color_sample * coverage_sample;
-    // MUST UNCOMMENT TO WORK !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    resultColor.rgb   += color_sample * coverage_sample;
+    
 
     totalCoverage += coverage_sample;
 }
@@ -500,8 +501,8 @@ for (int i = 0; i < numSamplesOdd; ++i) {
     int2 other = clamp(int2(offset + gl_FragCoord.xy), trimBandThickness, SCREEN_MAX);
     int2 B = int2((offset + gl_FragCoord.xy) * lowResolutionFactor);
 
-    //COMPUTE_RADIUS_SAMPLE();
-    float2 velocity_sample = readAdjustedVelocity(other, B, radius_sample, radius_CoC_ratio).xy;
+    COMPUTE_RADIUS_SAMPLE();
+    //float2 velocity_sample = readAdjustedVelocity(other, B, radius_sample, radius_CoC_ratio).xy;
 
     float depth_sample = texelFetch(depthBuffer, other, 0).x;
 
@@ -518,6 +519,7 @@ for (int i = 0; i < numSamplesOdd; ++i) {
     float ratioDoF = abs(radius_CoC_ratio);
     float ratioMB = 1.0-ratioDoF;
     float CoC_sample = texelFetch(blurSourceBuffer, B, 0).a * 2.0 - 1.0;
+    //float CoC_sample = radius_sample*radius_CoC_ratio/maxCoCRadiusPixels;
     const float nearFieldBorder = 0.25;
     const float superNearFieldBorder = 0.50;
     //const float nearFieldTransition = 0.35;
