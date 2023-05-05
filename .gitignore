@@ -8,6 +8,11 @@
 
 !/G3D10/G3D-app.lib/
 
+!/G3D10/VisualStudio/
+/G3D10/VisualStudio/*
+!/G3D10/VisualStudio/G3D-app.lib.vcxproj
+!/G3D10/VisualStudio/G3D-app.lib.vcxproj.filters
+
 !/G3D10/data-files/
 /G3D10/data-files/*
 /G3D10/data-files/*/
